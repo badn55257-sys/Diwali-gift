@@ -58,7 +58,7 @@ export const SpecialGiftModal: React.FC<SpecialGiftModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
       {/* Outer Card Wrapper with Royal Rajasthani Gold Frame */}
       <div
-        className="relative w-full max-w-lg rounded-2xl p-8 sm:p-10 text-center text-amber-100 overflow-hidden shadow-2xl transition-all"
+        className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl p-6 sm:p-10 text-center text-amber-100 shadow-2xl transition-all"
         style={{
           background: 'linear-gradient(145deg, #18111e 0%, #2a1b10 50%, #120a16 100%)',
           border: '1px solid rgba(245, 158, 11, 0.45)',

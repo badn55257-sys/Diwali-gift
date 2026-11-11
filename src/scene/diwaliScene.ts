@@ -46,6 +46,8 @@ export class DiwaliScene {
   private mouse = new THREE.Vector2(-1000, -1000);
   private hoveredDiya: DiyaInstance | null = null;
   private isDragging = false;
+  private hasDragged = false;
+  private pointerDownPos = { x: 0, y: 0 };
   private previousMousePosition = { x: 0, y: 0 };
   private cameraTarget = new THREE.Vector3(0, 2.5, 0);
   private cameraCurrentPreset: CameraPreset = 'cinematic';
@@ -99,11 +101,16 @@ export class DiwaliScene {
       powerPreference: 'high-performance',
       alpha: false,
     });
+    const isMobile = typeof window !== 'undefined' && (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth < 768
+    );
+
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
     this.renderer.setPixelRatio(
-      this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2)
+      this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, isMobile ? 1.75 : 2.0)
     );
     this.renderer.shadowMap.enabled = !this.isSoftwareGl;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -119,14 +126,20 @@ export class DiwaliScene {
     this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
     pmremGenerator.dispose();
 
-    // 5. Camera setup
+    // 5. Camera setup with adaptive initial FOV
+    const initialAspect = window.innerWidth / window.innerHeight;
+    const initialFov = initialAspect < 0.8 ? 68 : initialAspect < 1.1 ? 60 : 52;
     this.camera = new THREE.PerspectiveCamera(
-      52,
-      window.innerWidth / window.innerHeight,
+      initialFov,
+      initialAspect,
       0.1,
       120
     );
-    this.camera.position.copy(this.presets.cinematic.pos);
+    const initialPos = this.presets.cinematic.pos.clone();
+    if (initialAspect < 1.0) {
+      initialPos.z = 11.5;
+    }
+    this.camera.position.copy(initialPos);
     this.cameraTarget.copy(this.presets.cinematic.target);
     this.camera.lookAt(this.cameraTarget);
 
@@ -306,13 +319,21 @@ export class DiwaliScene {
     const targetConfig = this.presets[preset];
     if (!targetConfig) return;
 
+    const isPortrait = window.innerWidth < window.innerHeight;
+    const targetPos = targetConfig.pos.clone();
+    if (isPortrait) {
+      if (preset === 'cinematic') targetPos.z = 11.5;
+      if (preset === 'gift') targetPos.z = 4.0;
+      if (preset === 'courtyard') targetPos.z = 16.5;
+    }
+
     gsap.killTweensOf(this.camera.position);
     gsap.killTweensOf(this.cameraTarget);
 
     gsap.to(this.camera.position, {
-      x: targetConfig.pos.x,
-      y: targetConfig.pos.y,
-      z: targetConfig.pos.z,
+      x: targetPos.x,
+      y: targetPos.y,
+      z: targetPos.z,
       duration,
       ease: 'power2.out',
     });
@@ -420,13 +441,26 @@ export class DiwaliScene {
 
   private onWindowResize = () => {
     if (!this.renderer || !this.camera) return;
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const aspect = width / height;
+
+    this.camera.aspect = aspect;
+    if (aspect < 0.8) {
+      this.camera.fov = 68;
+    } else if (aspect < 1.1) {
+      this.camera.fov = 60;
+    } else {
+      this.camera.fov = 52;
+    }
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(width, height);
   };
 
   private onPointerDown = (e: PointerEvent) => {
     this.isDragging = true;
+    this.hasDragged = false;
+    this.pointerDownPos = { x: e.clientX, y: e.clientY };
     this.previousMousePosition = { x: e.clientX, y: e.clientY };
   };
 
@@ -439,6 +473,11 @@ export class DiwaliScene {
     if (this.isDragging) {
       const deltaX = e.clientX - this.previousMousePosition.x;
       const deltaY = e.clientY - this.previousMousePosition.y;
+
+      const totalDist = Math.hypot(e.clientX - this.pointerDownPos.x, e.clientY - this.pointerDownPos.y);
+      if (totalDist > 8) {
+        this.hasDragged = true;
+      }
 
       const rotSpeed = 0.003;
       // Orbit around current camera target
@@ -460,10 +499,10 @@ export class DiwaliScene {
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
     }
 
-    // Raycast hover detection for Gift Box and Diyas
+    // Raycast hover detection for Gift Box and Diyas (on devices with mouse cursor)
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    // 1. Check Gift Box
+    // 1. Check Gift Box hover
     if (this.giftBox) {
       const giftIntersects = this.raycaster.intersectObject(this.giftBox.clickProxy);
       if (giftIntersects.length > 0) {
@@ -475,7 +514,7 @@ export class DiwaliScene {
     }
     this.hoveredGift = false;
 
-    // 2. Check Diyas
+    // 2. Check Diyas hover
     const clickables = this.diyas.map(d => d.clickProxy);
     const intersects = this.raycaster.intersectObjects(clickables);
 
@@ -497,32 +536,52 @@ export class DiwaliScene {
   };
 
   private onClick = (e: MouseEvent) => {
-    // If clicked on Gift Box, unwrap / toggle it!
-    if (this.hoveredGift) {
-      this.toggleGift();
+    // If the user dragged to orbit the camera, ignore the subsequent click event
+    if (this.hasDragged) {
+      this.hasDragged = false;
       return;
     }
 
-    // If clicked on a Diya, light it and celebrate!
-    if (this.hoveredDiya) {
-      this.toggleDiya(this.hoveredDiya, true);
+    // Direct raycast at exact tap/click coordinates for mobile phone & laptop precision
+    const rect = this.canvas.getBoundingClientRect();
+    const clickNDC = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    this.raycaster.setFromCamera(clickNDC, this.camera);
 
-      // If clicked hero diya, animate camera closer
-      if (this.hoveredDiya.isHero) {
-        this.focusHeroDiya();
+    // 1. Direct check: Gift Box unboxing
+    if (this.giftBox) {
+      const giftIntersects = this.raycaster.intersectObject(this.giftBox.clickProxy);
+      if (giftIntersects.length > 0) {
+        this.toggleGift();
+        return;
       }
-      return;
     }
 
-    // Otherwise, click in the sky launches an interactive firework aimed at click point!
-    this.raycaster.setFromCamera(this.mouse, this.camera);
+    // 2. Direct check: Courtyard Diya lighting
+    const clickables = this.diyas.map(d => d.clickProxy);
+    const intersects = this.raycaster.intersectObjects(clickables);
+
+    if (intersects.length > 0) {
+      const proxy = intersects[0].object as unknown as { __diyaInstance?: DiyaInstance };
+      if (proxy.__diyaInstance) {
+        this.toggleDiya(proxy.__diyaInstance, true);
+        if (proxy.__diyaInstance.isHero) {
+          this.focusHeroDiya();
+        }
+        return;
+      }
+    }
+
+    // 3. Otherwise: launch interactive firework towards tapped coordinates in the sky!
     const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 12);
     const hitPoint = new THREE.Vector3();
     this.raycaster.ray.intersectPlane(plane, hitPoint);
 
-    if (hitPoint && hitPoint.y > 6.0) {
+    if (hitPoint && hitPoint.y > 5.0) {
       this.fireworks.launchRocket(
-        hitPoint.x + (Math.random() - 0.5) * 3,
+        hitPoint.x + (Math.random() - 0.5) * 2.5,
         hitPoint.z,
         Math.min(24, Math.max(10, hitPoint.y))
       );

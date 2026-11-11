@@ -107,18 +107,22 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
 
   const handleEnterClick = () => {
     setIsFadingOut(true);
-    soundManager.resumeContext();
-    soundManager.startMusic();
-    soundManager.playGiftUnwrap();
+    try {
+      soundManager.resumeContext();
+      soundManager.startMusic();
+      soundManager.playGiftUnwrap();
+    } catch {
+      // Audio fallback safe on mobile
+    }
 
     setTimeout(() => {
       onEnter();
-    }, 900);
+    }, 850);
   };
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-1000 ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-black min-h-[100dvh] transition-opacity duration-1000 px-4 py-6 overflow-hidden ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
@@ -127,7 +131,7 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
 
       {/* Central Radiance Glow */}
       <div
-        className={`absolute w-[480px] h-[480px] rounded-full transition-all duration-1000 ${
+        className={`absolute w-[280px] sm:w-[440px] md:w-[500px] h-[280px] sm:h-[440px] md:h-[500px] rounded-full transition-all duration-1000 pointer-events-none ${
           stage === 'illuminate' || stage === 'ready'
             ? 'opacity-35 scale-100'
             : 'opacity-0 scale-50'
@@ -139,10 +143,10 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
       />
 
       {/* Centerpiece Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
+      <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-xl my-auto">
         {/* Glowing Royal Gift Box Icon */}
         <div
-          className={`mb-6 p-4 rounded-full border border-amber-500/40 bg-amber-950/50 text-amber-300 transition-all duration-1000 ${
+          className={`mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-full border border-amber-500/40 bg-amber-950/50 text-amber-300 transition-all duration-1000 ${
             stage === 'illuminate' || stage === 'ready'
               ? 'opacity-100 scale-100'
               : 'opacity-0 scale-75'
@@ -151,12 +155,12 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
             boxShadow: '0 0 45px rgba(245, 158, 11, 0.45)',
           }}
         >
-          <Gift className="w-10 h-10 animate-bounce text-amber-300" />
+          <Gift className="w-8 h-8 sm:w-10 sm:h-10 animate-bounce text-amber-300" />
         </div>
 
         {/* Subtitle */}
         <div
-          className={`text-xs md:text-sm tracking-[0.35em] uppercase text-amber-300/80 mb-3 font-medium transition-all duration-1000 delay-150 ${
+          className={`text-[11px] sm:text-xs md:text-sm tracking-[0.25em] sm:tracking-[0.35em] uppercase text-amber-300/80 mb-2 sm:mb-3 font-medium transition-all duration-1000 delay-150 ${
             stage === 'illuminate' || stage === 'ready'
               ? 'opacity-100 translate-y-0'
               : 'opacity-0 translate-y-4'
@@ -167,7 +171,7 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
 
         {/* Main Title */}
         <h1
-          className={`font-cinzel text-4xl sm:text-6xl md:text-7xl font-bold tracking-wider text-gold-gradient mb-4 transition-all duration-1000 delay-300 ${
+          className={`font-cinzel text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-wider text-gold-gradient mb-3 sm:mb-4 transition-all duration-1000 delay-300 ${
             stage === 'illuminate' || stage === 'ready'
               ? 'opacity-100 translate-y-0'
               : 'opacity-0 translate-y-6'
@@ -181,7 +185,7 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
 
         {/* Special gift presentation */}
         <div
-          className={`text-base sm:text-lg text-amber-200/90 font-medium mb-8 transition-all duration-1000 delay-500 ${
+          className={`text-sm sm:text-base md:text-lg text-amber-200/90 font-medium mb-6 sm:mb-8 transition-all duration-1000 delay-500 ${
             stage === 'illuminate' || stage === 'ready'
               ? 'opacity-100 translate-y-0'
               : 'opacity-0 translate-y-4'
@@ -193,8 +197,12 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
         {/* "UNWRAP YOUR GIFT" Button */}
         <button
           onClick={handleEnterClick}
+          onTouchStart={() => {
+            // Pre-warm audio context on mobile touch start
+            try { soundManager.resumeContext(); } catch {}
+          }}
           disabled={stage !== 'ready'}
-          className={`group relative px-8 py-3.5 rounded-full overflow-hidden font-cinzel font-semibold text-sm md:text-base tracking-widest text-slate-950 transition-all duration-700 ${
+          className={`group relative px-7 sm:px-9 py-3 sm:py-4 min-h-[48px] rounded-full overflow-hidden font-cinzel font-bold text-xs sm:text-sm md:text-base tracking-widest text-slate-950 transition-all duration-700 select-none touch-manipulation ${
             stage === 'ready'
               ? 'opacity-100 translate-y-0 cursor-pointer shadow-lg hover:scale-105 active:scale-95'
               : 'opacity-0 translate-y-6 pointer-events-none'
@@ -204,18 +212,18 @@ export const OpeningSequence: React.FC<OpeningSequenceProps> = ({ onEnter }) => 
             boxShadow: '0 0 30px rgba(245, 158, 11, 0.5), 0 0 60px rgba(245, 158, 11, 0.25)',
           }}
         >
-          <div className="relative z-10 flex items-center gap-2">
+          <div className="relative z-10 flex items-center justify-center gap-2">
             <Gift className="w-4 h-4 text-amber-950 group-hover:rotate-12 transition-transform" />
             <span>UNWRAP YOUR GIFT</span>
             <Sparkles className="w-4 h-4 text-amber-950" />
           </div>
           {/* Shimmer overlay */}
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
         </button>
 
         {/* Creator signature attribution */}
         <div
-          className={`mt-10 text-xs tracking-wider text-amber-400/70 font-light transition-opacity duration-1000 delay-700 ${
+          className={`mt-6 sm:mt-10 text-[11px] sm:text-xs tracking-wider text-amber-400/70 font-light transition-opacity duration-1000 delay-700 ${
             stage === 'ready' ? 'opacity-80' : 'opacity-0'
           }`}
         >
