@@ -1,0 +1,6 @@
+{
+  "name": "Ultimate 3D Diwali Celebration",
+  "description": "Special gift from Badrinath R",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer utilities {
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-rozha {
+    font-family: 'Rozha One', serif;
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #030206;
+  color: #fef3c7;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Subtle golden shimmer and radiant glow */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #fff7ed 0%, #fde047 30%, #eab308 60%, #ca8a04 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gold-sparkle {
+  background: linear-gradient(90deg, #fef08a 0%, #ffffff 25%, #f59e0b 50%, #fef08a 75%, #ffffff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4s linear infinite;
+}
+
+.gold-glow {
+  text-shadow: 0 0 20px rgba(234, 179, 8, 0.5), 0 0 40px rgba(245, 158, 11, 0.3);
+}
+
+.gold-box-glow {
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.25), inset 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Smooth canvas wrapper */
+canvas {
+  touch-action: none;
+}
